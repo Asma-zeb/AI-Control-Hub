@@ -1,0 +1,1175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chatbot - Asma Zeb</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1f2e 50%, #1a1a1a 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .chat-container {
+            width: 1000px;
+            height: 650px;
+            background: #2C2C2C;
+            border-radius: 25px;
+            box-shadow: 0 25px 80px rgba(230, 150, 180, 0.3), 0 0 60px rgba(255, 255, 255, 0.05);
+            display: flex;
+            overflow: hidden;
+            border: 3px solid #E696B4;
+            position: relative;
+        }
+
+        /* Left Side - Robot Illustration Panel */
+        .robot-panel {
+            width: 45%;
+            background: linear-gradient(180deg, #E696B4 0%, #d47a9a 50%, #a85a7a 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Curved Divider Effect */
+        .robot-panel::after {
+            content: '';
+            position: absolute;
+            right: -50px;
+            top: 0;
+            width: 150px;
+            height: 100%;
+            background: #2C2C2C;
+            border-radius: 50% 0 0 50% / 50% 0 0 50%;
+            z-index: 1;
+        }
+
+        .robot-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+            padding-right: 20px;
+        }
+
+        .robot-image {
+            width: 260px;
+            height: auto;
+            filter: drop-shadow(0 10px 30px rgba(0, 0, 0, 0.3));
+            animation: float 3s ease-in-out infinite;
+            margin-left: -10px;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .robot-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2C2C2C;
+            margin-top: 25px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .robot-subtitle {
+            font-size: 14px;
+            color: #1a1a1a;
+            margin-top: 10px;
+            font-weight: 500;
+            padding: 0 20px;
+        }
+
+        .feature-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 25px;
+            padding: 0 30px;
+        }
+
+        .feature-badge {
+            background: rgba(44, 44, 44, 0.95);
+            color: #E696B4;
+            padding: 10px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(230, 150, 180, 0.3);
+        }
+
+        /* Right Side - Chat Area */
+        .chat-panel {
+            width: 55%;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, #F5F5F5 0%, #fceef4 50%, #F5F5F5 100%);
+            position: relative;
+            z-index: 2;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #E696B4 0%, #d47a9a 50%, #E696B4 100%);
+            padding: 15px 25px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .chat-header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chat-header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .model-selector {
+            position: relative;
+        }
+
+        .model-selector select {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: 2px solid #2C2C2C;
+            background: linear-gradient(135deg, #F5F5F5 0%, #fceef4 100%);
+            color: #2C2C2C;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.3s;
+            appearance: none;
+            padding-right: 35px;
+        }
+
+        .model-selector select:hover {
+            border-color: #E696B4;
+            box-shadow: 0 0 10px rgba(230, 150, 180, 0.3);
+        }
+
+        .model-selector select:focus {
+            border-color: #d47a9a;
+            box-shadow: 0 0 15px rgba(230, 150, 180, 0.5);
+        }
+
+        .model-selector::after {
+            content: '▼';
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 10px;
+            color: #2C2C2C;
+            pointer-events: none;
+        }
+
+        .model-badge {
+            background: rgba(44, 44, 44, 0.9);
+            color: #E696B4;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .settings-btn {
+            background: linear-gradient(135deg, #E696B4 0%, #d47a9a 100%);
+            color: #2C2C2C;
+            border: none;
+            border-radius: 50%;
+            width: 35px;
+            height: 35px;
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .settings-btn:hover {
+            transform: rotate(90deg) scale(1.1);
+            box-shadow: 0 5px 20px rgba(230, 150, 180, 0.4);
+        }
+
+        /* Settings Modal */
+        .settings-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .settings-modal.active {
+            display: flex;
+        }
+
+        .settings-content {
+            background: linear-gradient(180deg, #2C2C2C 0%, #3d2835 100%);
+            border-radius: 25px;
+            padding: 30px;
+            width: 90%;
+            max-width: 500px;
+            border: 3px solid #E696B4;
+            box-shadow: 0 25px 80px rgba(230, 150, 180, 0.3);
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #E696B4;
+        }
+
+        .settings-header h2 {
+            color: #E696B4;
+            font-size: 24px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #E696B4;
+            font-size: 28px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .api-key-group {
+            margin-bottom: 20px;
+        }
+
+        .api-key-group label {
+            display: block;
+            color: #F5F5F5;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .api-key-group input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #E696B4;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #F5F5F5 0%, #fceef4 100%);
+            color: #2C2C2C;
+            font-size: 13px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .api-key-group input:focus {
+            border-color: #d47a9a;
+            box-shadow: 0 0 15px rgba(230, 150, 180, 0.5);
+        }
+
+        .api-key-group .hint {
+            color: #E696B4;
+            font-size: 11px;
+            margin-top: 5px;
+            opacity: 0.8;
+        }
+
+        .save-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #E696B4 0%, #d47a9a 50%, #E696B4 100%);
+            color: #2C2C2C;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+            box-shadow: 0 5px 20px rgba(230, 150, 180, 0.3);
+        }
+
+        .save-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 30px rgba(230, 150, 180, 0.5);
+        }
+
+        .status-message {
+            padding: 12px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status-message.success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+
+        .status-message.error {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid #f44336;
+        }
+
+        .avatar {
+            width: 50px;
+            height: 50px;
+            background: #2C2C2C;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            border: 3px solid #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .chat-header-info h2 {
+            font-size: 20px;
+            color: #2C2C2C;
+            font-weight: 700;
+        }
+
+        .chat-header-info p {
+            font-size: 12px;
+            color: #1a1a1a;
+            margin-top: 3px;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: #4CAF50;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 12px 16px;
+            border-radius: 15px;
+            max-width: 85%;
+            word-wrap: break-word;
+            animation: fadeIn 0.3s ease;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            background: linear-gradient(135deg, #E696B4 0%, #d47a9a 50%, #E696B4 100%);
+            color: #2C2C2C;
+            margin-left: auto;
+            border-bottom-right-radius: 5px;
+            font-weight: 500;
+            box-shadow: 0 4px 15px rgba(230, 150, 180, 0.4);
+        }
+
+        .message.bot {
+            background: linear-gradient(135deg, #FFFFFF 0%, #fff0f6 100%);
+            color: #2C2C2C;
+            margin-right: auto;
+            border-bottom-left-radius: 5px;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E696B4;
+        }
+
+        .chat-input-container {
+            display: flex;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #2C2C2C 0%, #3d2835 50%, #2C2C2C 100%);
+            border-top: 2px solid #E696B4;
+            gap: 10px;
+        }
+
+        #chatInput {
+            flex: 1;
+            padding: 14px 22px;
+            border: 2px solid #E696B4;
+            border-radius: 30px;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            background: linear-gradient(90deg, #F5F5F5 0%, #fceef4 100%);
+            color: #2C2C2C;
+        }
+
+        #chatInput:focus {
+            border-color: #d47a9a;
+            box-shadow: 0 0 20px rgba(230, 150, 180, 0.5);
+        }
+
+        #sendButton {
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #E696B4 0%, #d47a9a 50%, #E696B4 100%);
+            color: #2C2C2C;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 700;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 5px 20px rgba(230, 150, 180, 0.4);
+        }
+
+        #sendButton:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 30px rgba(230, 150, 180, 0.6);
+        }
+
+        #sendButton:active {
+            transform: scale(0.95);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            background: linear-gradient(90deg, #2C2C2C 0%, #3d2835 50%, #2C2C2C 100%);
+            border-top: 1px solid #E696B4;
+        }
+
+        .typing-indicator.visible {
+            display: block;
+        }
+
+        .typing-indicator span {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background: linear-gradient(135deg, #E696B4, #d47a9a);
+            border-radius: 50%;
+            margin: 0 4px;
+            animation: bounce 1.4s infinite;
+            box-shadow: 0 0 12px rgba(230, 150, 180, 0.6);
+        }
+
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-12px); }
+        }
+
+        .quick-replies {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 12px 20px;
+            background: linear-gradient(90deg, #2C2C2C 0%, #3d2835 50%, #2C2C2C 100%);
+            border-top: 1px solid #444;
+        }
+
+        .quick-reply-btn {
+            padding: 9px 16px;
+            background: linear-gradient(135deg, #F5F5F5 0%, #fceef4 100%);
+            border: 2px solid #E696B4;
+            border-radius: 22px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+            color: #2C2C2C;
+            font-weight: 600;
+        }
+
+        .quick-reply-btn:hover {
+            background: linear-gradient(135deg, #E696B4 0%, #d47a9a 100%);
+            color: #2C2C2C;
+            box-shadow: 0 5px 20px rgba(230, 150, 180, 0.5);
+            transform: translateY(-3px);
+        }
+
+        /* Scrollbar styling */
+        .chat-messages::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track {
+            background: #fceef4;
+            border-radius: 10px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #E696B4, #d47a9a);
+            border-radius: 10px;
+            border: 2px solid #fceef4;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #d47a9a, #E696B4);
+            box-shadow: 0 0 12px rgba(230, 150, 180, 0.5);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .chat-container {
+                width: 90%;
+                height: 600px;
+            }
+            
+            .robot-panel {
+                width: 40%;
+            }
+            
+            .chat-panel {
+                width: 60%;
+            }
+            
+            .robot-image {
+                width: 200px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                flex-direction: column;
+                height: 90vh;
+                overflow-y: auto;
+            }
+            
+            .robot-panel {
+                width: 100%;
+                padding: 20px;
+                min-height: 250px;
+            }
+            
+            .robot-panel::after {
+                display: none;
+            }
+            
+            .chat-panel {
+                width: 100%;
+                flex: 1;
+            }
+            
+            .robot-image {
+                width: 150px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <!-- Left Panel - Robot Illustration -->
+        <div class="robot-panel">
+            <div class="robot-content">
+                <img src="images.png" alt="AI Robot Assistant" class="robot-image">
+                <h1 class="robot-title">AI Assistant</h1>
+                <p class="robot-subtitle">Powered by Asma Zeb</p>
+                
+                <div class="feature-badges">
+                    <div class="feature-badge">💬 Chat</div>
+                    <div class="feature-badge">📧 Email</div>
+                    <div class="feature-badge">🤖 AI Powered</div>
+                    <div class="feature-badge">⚡ Fast</div>
+                    <div class="feature-badge">🔒 Secure</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Panel - Chat Interface -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <div class="chat-header-left">
+                    <div class="avatar">🤖</div>
+                    <div class="chat-header-info">
+                        <h2>AI Assistant</h2>
+                        <p><span class="status-dot"></span>Online - Ready to help</p>
+                    </div>
+                </div>
+                <div class="chat-header-right">
+                    <div class="model-selector">
+                        <select id="modelSelect" onchange="changeModel()">
+                            <option value="builtin">🤖 Built-in (Free - No API Key)</option>
+                            <option value="gpt">🟢 ChatGPT (Requires API Key)</option>
+                            <option value="gemini">🔵 Gemini (Free Tier Available)</option>
+                            <option value="qwen">🟣 Qwen (Free Credits)</option>
+                            <option value="deepseek">🔴 DeepSeek (Requires Credits)</option>
+                        </select>
+                    </div>
+                    <span class="model-badge" id="modelBadge">DEFAULT</span>
+                    <button class="settings-btn" onclick="openSettings()" title="API Settings">⚙️</button>
+                </div>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will be appended here -->
+            </div>
+            
+            <div class="quick-replies">
+                <button class="quick-reply-btn" onclick="sendQuickReply('Hello!')">👋 Hello</button>
+                <button class="quick-reply-btn" onclick="sendQuickReply('Help')">❓ Help</button>
+                <button class="quick-reply-btn" onclick="sendQuickReply('Send an email')">📧 Email</button>
+                <button class="quick-reply-btn" onclick="sendQuickReply('What can you do?')">💡 Features</button>
+            </div>
+            
+            <div class="chat-input-container">
+                <input type="text" id="chatInput" placeholder="Type your message..." autofocus>
+                <button id="sendButton">Send</button>
+            </div>
+            
+            <div class="typing-indicator" id="typingIndicator">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div class="settings-modal" id="settingsModal">
+        <div class="settings-content">
+            <div class="settings-header">
+                <h2>⚙️ API Settings</h2>
+                <button class="close-btn" onclick="closeSettings()">×</button>
+            </div>
+            
+            <div style="background: rgba(230, 150, 180, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #E696B4;">
+                <p style="color: #E696B4; font-size: 12px; margin: 0;">
+                    💡 <strong>Tip:</strong> Only add API keys for models you want to use. Built-in AI works free without any API keys!
+                </p>
+            </div>
+            
+            <div class="api-key-group">
+                <label for="gptKey">🟢 OpenAI API Key (ChatGPT)</label>
+                <input type="password" id="gptKey" placeholder="sk-...">
+                <div class="hint">Get your key from: <a href="https://platform.openai.com/api-keys" target="_blank" style="color: #E696B4;">platform.openai.com</a> • Requires account balance</div>
+            </div>
+            
+            <div class="api-key-group">
+                <label for="geminiKey">🔵 Google Gemini API Key</label>
+                <input type="password" id="geminiKey" placeholder="AIza...">
+                <div class="hint">Get your key from: <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: #E696B4;">makersuite.google.com</a> • Free tier: 60 requests/minute</div>
+            </div>
+            
+            <div class="api-key-group">
+                <label for="qwenKey">🟣 Qwen API Key (Alibaba)</label>
+                <input type="password" id="qwenKey" placeholder="sk-...">
+                <div class="hint">Get your key from: <a href="https://dashscope.console.aliyun.com/" target="_blank" style="color: #E696B4;">dashscope.console.aliyun.com</a> • Free trial credits available</div>
+            </div>
+            
+            <div class="api-key-group">
+                <label for="deepseekKey">🔴 DeepSeek API Key</label>
+                <input type="password" id="deepseekKey" placeholder="sk-...">
+                <div class="hint">Get your key from: <a href="https://platform.deepseek.com/" target="_blank" style="color: #E696B4;">platform.deepseek.com</a> • Requires account balance</div>
+            </div>
+            
+            <button class="save-btn" onclick="saveAPIKeys()">💾 Save API Keys</button>
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatMessages = document.getElementById('chatMessages');
+            const chatInput = document.getElementById('chatInput');
+            const sendButton = document.getElementById('sendButton');
+            const typingIndicator = document.getElementById('typingIndicator');
+            const modelSelect = document.getElementById('modelSelect');
+            const modelBadge = document.getElementById('modelBadge');
+
+            // Current selected model
+            let currentModel = 'builtin';
+
+            // API Keys - Load from localStorage
+            let API_KEYS = {
+                gpt: localStorage.getItem('gpt_api_key') || '',
+                gemini: localStorage.getItem('gemini_api_key') || '',
+                qwen: localStorage.getItem('qwen_api_key') || '',
+                deepseek: localStorage.getItem('deepseek_api_key') || ''
+            };
+
+            // Open settings modal
+            window.openSettings = function() {
+                document.getElementById('settingsModal').classList.add('active');
+                
+                // Load saved keys into inputs
+                document.getElementById('gptKey').value = API_KEYS.gpt;
+                document.getElementById('geminiKey').value = API_KEYS.gemini;
+                document.getElementById('qwenKey').value = API_KEYS.qwen;
+                document.getElementById('deepseekKey').value = API_KEYS.deepseek;
+            };
+
+            // Close settings modal
+            window.closeSettings = function() {
+                document.getElementById('settingsModal').classList.remove('active');
+            };
+
+            // Save API keys
+            window.saveAPIKeys = function() {
+                API_KEYS.gpt = document.getElementById('gptKey').value.trim();
+                API_KEYS.gemini = document.getElementById('geminiKey').value.trim();
+                API_KEYS.qwen = document.getElementById('qwenKey').value.trim();
+                API_KEYS.deepseek = document.getElementById('deepseekKey').value.trim();
+                
+                // Save to localStorage
+                localStorage.setItem('gpt_api_key', API_KEYS.gpt);
+                localStorage.setItem('gemini_api_key', API_KEYS.gemini);
+                localStorage.setItem('qwen_api_key', API_KEYS.qwen);
+                localStorage.setItem('deepseek_api_key', API_KEYS.deepseek);
+                
+                // Show success message
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.textContent = '✅ API keys saved successfully!';
+                statusMsg.className = 'status-message success';
+                statusMsg.style.display = 'block';
+                
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                    closeSettings();
+                }, 2000);
+            };
+
+            // Close modal when clicking outside
+            document.getElementById('settingsModal').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeSettings();
+                }
+            });
+
+            // Change model function
+            window.changeModel = function() {
+                const selectedValue = modelSelect.value;
+                currentModel = selectedValue;
+                
+                // Update badge text
+                const badgeTexts = {
+                    builtin: 'DEFAULT',
+                    gpt: 'GPT',
+                    gemini: 'GEMINI',
+                    qwen: 'QWEN',
+                    deepseek: 'DEEPSEEK'
+                };
+                modelBadge.textContent = badgeTexts[selectedValue] || 'DEFAULT';
+                
+                // Show notification
+                const modelNames = {
+                    builtin: 'Built-in AI',
+                    gpt: 'ChatGPT',
+                    gemini: 'Google Gemini',
+                    qwen: 'Qwen AI',
+                    deepseek: 'DeepSeek'
+                };
+                
+                addMessage(`🔄 Switched to ${modelNames[selectedValue]} model!`, 'bot');
+                
+                // Save to localStorage
+                localStorage.setItem('selectedModel', selectedValue);
+            };
+
+            // Load saved model
+            const savedModel = localStorage.getItem('selectedModel');
+            if (savedModel) {
+                modelSelect.value = savedModel;
+                currentModel = savedModel;
+                const badgeTexts = {
+                    builtin: 'DEFAULT',
+                    gpt: 'GPT',
+                    gemini: 'GEMINI',
+                    qwen: 'QWEN',
+                    deepseek: 'DEEPSEEK'
+                };
+                modelBadge.textContent = badgeTexts[savedModel] || 'DEFAULT';
+            }
+
+            // Add message to chat
+            function addMessage(text, sender) {
+                const messageElement = document.createElement('div');
+                messageElement.classList.add('message', sender);
+                messageElement.textContent = text;
+                chatMessages.appendChild(messageElement);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // Show/hide typing indicator
+            function showTypingIndicator(show) {
+                if (show) {
+                    typingIndicator.classList.add('visible');
+                } else {
+                    typingIndicator.classList.remove('visible');
+                }
+            }
+
+            // Call LLM API based on selected model
+            async function callLLMAPI(userMessage) {
+                console.log('Current model:', currentModel);
+                console.log('API Keys:', API_KEYS);
+                
+                if (currentModel === 'builtin') {
+                    return getBotResponse(userMessage);
+                }
+                
+                const apiKey = API_KEYS[currentModel];
+                
+                if (!apiKey || apiKey.trim() === '') {
+                    return `⚠️ API key not configured for ${currentModel.toUpperCase()}. Please click the ⚙️ settings icon to add your API key.`;
+                }
+
+                try {
+                    console.log(`Calling ${currentModel} API with key:`, apiKey.substring(0, 10) + '...');
+                    
+                    switch (currentModel) {
+                        case 'gpt':
+                            return await callGPT(userMessage, apiKey);
+                        case 'gemini':
+                            return await callGemini(userMessage, apiKey);
+                        case 'qwen':
+                            return await callQwen(userMessage, apiKey);
+                        case 'deepseek':
+                            return await callDeepSeek(userMessage, apiKey);
+                        default:
+                            return getBotResponse(userMessage);
+                    }
+                } catch (error) {
+                    console.error('LLM API Error:', error);
+                    return `⚠️ Error: ${error.message}. Please check your API key and try again.`;
+                }
+            }
+
+            // OpenAI GPT API
+            async function callGPT(message, apiKey) {
+                console.log('Calling GPT API...');
+                
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'gpt-3.5-turbo',
+                        messages: [
+                            { role: 'system', content: 'You are a helpful AI assistant. Be concise and friendly.' },
+                            { role: 'user', content: message }
+                        ],
+                        max_tokens: 500
+                    })
+                });
+                
+                console.log('GPT Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`GPT Error: ${errorData.error?.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('GPT Response:', data);
+                return data.choices[0].message.content;
+            }
+
+            // Google Gemini API
+            async function callGemini(message, apiKey) {
+                console.log('Calling Gemini API...');
+                
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{ text: message }]
+                        }],
+                        generationConfig: {
+                            maxOutputTokens: 500
+                        }
+                    })
+                });
+                
+                console.log('Gemini Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Gemini Error: ${errorData.error?.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Gemini Response:', data);
+                
+                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content) {
+                    throw new Error('Invalid response from Gemini');
+                }
+                
+                return data.candidates[0].content.parts[0].text;
+            }
+
+            // Qwen API (Alibaba Cloud)
+            async function callQwen(message, apiKey) {
+                console.log('Calling Qwen API...');
+                
+                const response = await fetch('https://dashscope.aliyuncs.com/api/v1/services/aigc/text-generation/generation', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'qwen-turbo',
+                        input: {
+                            messages: [
+                                { role: 'system', content: 'You are a helpful AI assistant.' },
+                                { role: 'user', content: message }
+                            ]
+                        },
+                        parameters: {
+                            max_tokens: 500
+                        }
+                    })
+                });
+                
+                console.log('Qwen Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`Qwen Error: ${errorData.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Qwen Response:', data);
+                
+                if (!data.output || !data.output.text) {
+                    throw new Error('Invalid response from Qwen');
+                }
+                
+                return data.output.text;
+            }
+
+            // DeepSeek API
+            async function callDeepSeek(message, apiKey) {
+                console.log('Calling DeepSeek API...');
+                
+                const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'deepseek-chat',
+                        messages: [
+                            { role: 'system', content: 'You are a helpful AI assistant.' },
+                            { role: 'user', content: message }
+                        ],
+                        max_tokens: 500
+                    })
+                });
+                
+                console.log('DeepSeek Response status:', response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`DeepSeek Error: ${errorData.error?.message || response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('DeepSeek Response:', data);
+                return data.choices[0].message.content;
+            }
+
+            // Extract email from text
+            function extractEmail(text) {
+                const emailPattern = /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g;
+                const emails = text.match(emailPattern);
+                return emails ? emails[0] : null;
+            }
+
+            // Get AI response based on user input
+            function getBotResponse(userMessage) {
+                const msg = userMessage.toLowerCase().trim();
+                
+                // Greetings
+                if (msg.match(/\b(hi|hello|hey|greetings|good morning|good afternoon|good evening)\b/)) {
+                    return "Hello! 👋 I'm your AI Assistant. How can I help you today?";
+                }
+                
+                // How are you
+                if (msg.includes('how are you') || msg.includes('how\'re you')) {
+                    return "I'm doing great! 😊 Ready to assist you with your tasks. What would you like to do?";
+                }
+                
+                // Help
+                if (msg.includes('help') || msg === 'help') {
+                    return "I can help you with:\n\n📧 Draft emails\n💬 General conversation\n❓ Answer questions\n⏰ Tell time/date\n\nJust type your request!";
+                }
+                
+                // Thanks
+                if (msg.includes('thank') || msg.includes('thanks')) {
+                    return "You're welcome! 😊 Is there anything else I can help you with?";
+                }
+                
+                // Goodbye
+                if (msg.match(/\b(bye|goodbye|see you|exit|quit)\b/)) {
+                    return "Goodbye! 👋 Have a great day! Feel free to come back anytime.";
+                }
+                
+                // Email related
+                if (msg.includes('email')) {
+                    const email = extractEmail(userMessage);
+                    if (msg.includes('send') || msg.includes('write') || msg.includes('draft')) {
+                        if (email) {
+                            return `I can help you draft an email to ${email}. 📧\n\nWhat would you like to say in the email?`;
+                        }
+                        return "I'd be happy to help you draft an email! 📧\n\nPlease tell me:\n1. Who is the recipient?\n2. What's the subject?\n3. What's the main message?";
+                    }
+                    return "I can assist with email-related tasks. Would you like me to help you draft an email? 📧";
+                }
+                
+                // Name/Identity
+                if (msg.includes('who are you') || msg.includes('your name')) {
+                    return "I'm an AI Assistant created by Asma Zeb. 🤖\n\nI'm built with JavaScript and can help you with various tasks!";
+                }
+                
+                // Creator
+                if (msg.includes('asma') || msg.includes('zeb') || msg.includes('creator') || msg.includes('made you')) {
+                    return "I was created by Asma Zeb. 🎓\n\nShe specializes in Web Development, Agentic AI, and Python Programming.";
+                }
+                
+                // Time/Date
+                if (msg.includes('time') || msg.includes('date') || msg.includes('day')) {
+                    const now = new Date();
+                    return `📅 Current date and time: ${now.toLocaleString()}`;
+                }
+                
+                // Weather
+                if (msg.includes('weather')) {
+                    return "🌤️ I don't have access to real-time weather data yet. But I can help you with other tasks!";
+                }
+                
+                // Features/Capabilities
+                if (msg.includes('can you do') || msg.includes('features') || msg.includes('capabilities')) {
+                    return "Here's what I can do:\n\n💬 Engage in conversations\n📧 Help draft emails\n❓ Answer general questions\n⏰ Tell current time/date\n📋 Provide information\n\nWhat would you like to try?";
+                }
+                
+                // Projects
+                if (msg.includes('project') || msg.includes('work') || msg.includes('portfolio')) {
+                    return "Asma Zeb has worked on several projects:\n\n📊 Home Price Prediction (ML)\n🧠 Alzheimer's Research (ML)\n🤖 n8n Automation Workflows\n📧 AI Email Assistant\n🎮 Quiz Game (Web)\n\nCheck the portfolio for more!";
+                }
+                
+                // GitHub
+                if (msg.includes('github')) {
+                    return "Check out the projects on GitHub! 🔗\n\nThere are multiple repositories with ML, automation, and AI projects!";
+                }
+                
+                // Skills
+                if (msg.includes('skill') || msg.includes('technology') || msg.includes('tech stack')) {
+                    return "Asma Zeb's skills include:\n\n💻 Web Development\n🤖 Agentic AI Engineering\n🐍 Python Programming\n📊 PowerBI Analytics\n⚙️ n8n Automation\n📈 Data Analytics";
+                }
+                
+                // Default response
+                return `I received: "${userMessage}"\n\nI'm a demo AI assistant. Try asking me to:\n• Say hello\n• Help with emails\n• Tell the time\n• Show my features`;
+            }
+
+            // Send message
+            async function sendMessage() {
+                const userMessage = chatInput.value.trim();
+                if (userMessage) {
+                    addMessage(userMessage, 'user');
+                    chatInput.value = '';
+                    
+                    showTypingIndicator(true);
+                    
+                    try {
+                        // Call LLM API or built-in response
+                        const botResponse = await callLLMAPI(userMessage);
+                        showTypingIndicator(false);
+                        addMessage(botResponse, 'bot');
+                    } catch (error) {
+                        showTypingIndicator(false);
+                        addMessage('⚠️ Sorry, I encountered an error. Please try again.', 'bot');
+                        console.error('Error:', error);
+                    }
+                }
+            }
+
+            // Quick reply function
+            window.sendQuickReply = function(text) {
+                chatInput.value = text;
+                sendMessage();
+            };
+
+            // Event listeners
+            sendButton.addEventListener('click', sendMessage);
+
+            chatInput.addEventListener('keypress', (event) => {
+                if (event.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+
+            // Initial bot message
+            setTimeout(() => {
+                addMessage("Hello! 👋 I'm your AI Assistant. How can I help you today?", 'bot');
+            }, 500);
+        });
+    </script>
+</body>
+</html>

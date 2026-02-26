@@ -1,0 +1,289 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "email-agent-webhook",
+        "responseMode": "lastNode",
+        "authentication": "basicAuth",
+        "options": {}
+      },
+      "id": "c1f7a6f2-1a41-4c12-8f92-5d46e3d2a71d",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 260]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "Authorization",
+          "value": "Bearer your-openai-api-key"
+        },
+        "sendJson": true,
+        "jsonBody": "={\"model\": \"gpt-4\", \"messages\": [{\"role\": \"system\", \"content\": \"You are an intelligent chatbot assistant. Your primary goal is to either engage in a conversation with the user or identify intent to send a personalized email. If the user expresses intent to send an email, extract key details like recipient(s), subject, and the core message/purpose. Prioritize understanding before action. If unsure, ask clarifying questions. When identifying email intent, respond with a JSON object like: {\\\"intent\\\": \\\"send_email\\\", \\\"recipientEmail\\\": \\\"email@example.com\\\", \\\"subject\\\": \\\"Email Subject\\\", \\\"message\\\": \\\"Email body content\\\"}. Otherwise, respond with conversational text.\" }, {\"role\": \"user\", \"content\": $json.body.text}], \"temperature\": 0.7, \"max_tokens\": 500}}",
+        "options": {}
+      },
+      "id": "e2b3c4d5-6e7f-4801-8c9a-b0d1e2f3a4b5",
+      "name": "HTTP Request - LLM Intent & Conversation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [480, 260]
+    },
+    {
+      "parameters": {
+        "conditions": [
+          {
+            "value1": "={{$json.data.choices[0].message.content.includes('\"intent\": \"send_email\"')}}",
+            "value2": "true",
+            "operation": "boolean"
+          }
+        ]
+      },
+      "id": "f3g4h5i6-7j8k-4912-9d0e-1f2g3h4i5j6k",
+      "name": "IF - Email Intent Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [720, 260]
+    },
+    {
+      "parameters": {
+        "sheetId": "your-google-sheet-id",
+        "range": "Sheet1!A:G",
+        "operation": "getAll",
+        "options": {}
+      },
+      "id": "g4h5i6j7-8k9l-4a23-bcde-fg1h2i3j4k5l",
+      "name": "Google Sheets - Get Contact Data",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [960, 160],
+      "credentials": {
+        "googleSheetsApi": {
+          "id": "your-google-sheets-credential-id",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "function": "filter",
+        "value": "={{$json.emailIntent.recipientEmail}}",
+        "propertyName": "Email"
+      },
+      "id": "h5i6j7k8-9l0m-4b34-cdef-g1h2i3j4k5l6m",
+      "name": "Filter Contact by Email",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 1,
+      "position": [1200, 160]
+    },
+    {
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerAuth": {
+          "name": "Authorization",
+          "value": "Bearer your-openai-api-key"
+        },
+        "sendJson": true,
+        "jsonBody": "={\"model\": \"gpt-4\", \"messages\": [{\"role\": \"system\", \"content\": \"You are an expert email generator. Craft a professional, personalized email using the provided recipient data and message intent. Ensure the tone is appropriate for a business context. The response must be a JSON object with two fields: \"subject\" and \"body\". Do not include a signature within the body.\" }, {\"role\": \"user\", \"content\": \"Generate a personalized email for {{ $json.Name }} ({{ $json.Department }} at {{ $json.Company }}). Message Intent: '{{$json.emailIntent.message}}'. Original Subject Idea: '{{$json.emailIntent.subject}}'.\"}], \"temperature\": 0.7, \"max_tokens\": 1000}",
+        "options": {}
+      },
+      "id": "i6j7k8l9-0m1n-4c45-defg-1h2i3j4k5l6m7n",
+      "name": "HTTP Request - Generate Personalized Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [1440, 160]
+    },
+    {
+      "parameters": {
+        "fromEmail": "sender@example.com",
+        "toEmail": "={{$json.Email}}",
+        "subject": "={{JSON.parse($json.data.choices[0].message.content).subject}}",
+        "body": "={{JSON.parse($json.data.choices[0].message.content).body}}\n\n---\n[Your Name]\n[Your Title]\n[Your Company]",
+        "options": {}
+      },
+      "id": "j7k8l9m0-1n2o-4d56-efgh-2i3j4k5l6m7n8o",
+      "name": "Email - Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 1,
+      "position": [1680, 160],
+      "credentials": {
+        "smtp": {
+          "id": "your-smtp-credential-id",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sheetId": "your-google-sheet-id",
+        "range": "Sheet1!A:G",
+        "operation": "update",
+        "options": {
+          "valueInputOption": "USER_ENTERED",
+          "matchField": "Email"
+        },
+        "data": {
+          "updateValues": [
+            {
+              "Email": "={{$json.Email}}",
+              "Status": "Email Sent",
+              "Last Contacted": "={{new Date().toISOString()}}"
+            }
+          ]
+        }
+      },
+      "id": "k8l9m0n1-2o3p-4e67-fghi-3j4k5l6m7n8o9p",
+      "name": "Google Sheets - Update Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 1,
+      "position": [1920, 160],
+      "credentials": {
+        "googleSheetsApi": {
+          "id": "your-google-sheets-credential-id",
+          "name": "Google Sheets Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseData": {
+          "message": "Email sent successfully to {{$json.Email}}."
+        }
+      },
+      "id": "l9m0n1o2-3p4q-4f78-ghij-4k5l6m7n8o9p0q",
+      "name": "Response - Email Sent",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2160, 160]
+    },
+    {
+      "parameters": {
+        "responseCode": 200,
+        "responseData": {
+          "message": "Conversation continues: {{$json.data.choices[0].message.content}}"
+        }
+      },
+      "id": "m0n1o2p3-4q5r-4g89-hijk-5l6m7n8o9p0q1r",
+      "name": "Response - Conversation",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [960, 360]
+    },
+    {
+      "parameters": {
+        "function": "transform",
+        "value": "={{JSON.parse($json.data.choices[0].message.content)}}"
+      },
+      "id": "n1o2p3q4-5r6s-4h90-ijkl-6m7n8o9p0q1r2s",
+      "name": "Extract Email Intent",
+      "type": "n8n-nodes-base.functionItem",
+      "typeVersion": 1,
+      "position": [840, 160]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - LLM Intent & Conversation",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - LLM Intent & Conversation": {
+      "main": [
+        [
+          {
+            "node": "IF - Email Intent Detected?",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "IF - Email Intent Detected?": {
+      "main": [
+        [
+          {
+            "node": "Extract Email Intent",
+            "input": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Conversation",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Get Contact Data": {
+      "main": [
+        [
+          {
+            "node": "Filter Contact by Email",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "Filter Contact by Email": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Generate Personalized Email",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request - Generate Personalized Email": {
+      "main": [
+        [
+          {
+            "node": "Email - Send Email",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "Email - Send Email": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Update Status",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Update Status": {
+      "main": [
+        [
+          {
+            "node": "Response - Email Sent",
+            "input": 0
+          }
+        ]
+      ]
+    },
+    "Extract Email Intent": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Get Contact Data",
+            "input": 0
+          }
+        ]
+      ]
+    }
+  }
+}
