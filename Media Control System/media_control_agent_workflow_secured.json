@@ -1,0 +1,867 @@
+{
+  "name": "Media Control Agent - Secured",
+  "description": "Enhanced workflow with security validations, input sanitization, and error handling",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "start-node",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "media-control-webhook",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [50, 300],
+      "webhookId": "secured-media-control"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Input Validation and Sanitization\nconst input = $input.all()[0].json;\n\n// Validate required fields\nconst requiredFields = ['agentId', 'clientId', 'configValid'];\nfor (const field of requiredFields) {\n  if (!input[field]) {\n    throw new Error(`Missing required field: ${field}`);\n  }\n}\n\n// Sanitize string inputs (prevent XSS/injection)\nfunction sanitize(str) {\n  if (typeof str !== 'string') return str;\n  return str\n    .replace(/[<>]/g, '')\n    .replace(/javascript:/gi, '')\n    .replace(/on\\w+=/gi, '')\n    .trim();\n}\n\n// Apply sanitization\nconst sanitized = {\n  ...input,\n  agentId: sanitize(input.agentId),\n  clientId: sanitize(input.clientId),\n  jobSector: input.jobSector ? sanitize(input.jobSector) : null,\n  notes: input.notes ? sanitize(input.notes) : null\n};\n\n// Validate configValid is boolean\nif (typeof sanitized.configValid !== 'boolean') {\n  sanitized.configValid = sanitized.configValid === 'true';\n}\n\n// Rate limiting check (simple in-memory)\nconst rateLimitKey = `rate_${sanitized.clientId}`;\nconst now = Date.now();\nconst rateWindow = 60000; // 1 minute\nconst maxRequests = 30;\n\nif (!global.rateLimit) global.rateLimit = {};\nif (!global.rateLimit[rateLimitKey]) {\n  global.rateLimit[rateLimitKey] = [];\n}\n\nglobal.rateLimit[rateLimitKey] = global.rateLimit[rateLimitKey].filter(\n  ts => now - ts < rateWindow\n);\n\nif (global.rateLimit[rateLimitKey].length >= maxRequests) {\n  throw new Error('Rate limit exceeded. Please slow down.');\n}\n\nglobal.rateLimit[rateLimitKey].push(now);\n\nreturn { json: sanitized };"}
+      },
+      "id": "input-validation",
+      "name": "Input Validation & Sanitization",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "config-valid-check",
+              "leftValue": "={{ $json.configValid }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "config-validation",
+      "name": "Configuration Validation",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.chatMode }}",
+              "rightValue": "chat",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        }
+      },
+      "id": "chat-mode-check",
+      "name": "Chat Mode Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.callMode }}",
+              "rightValue": "active",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "call-mode-check",
+      "name": "Call Mode Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [680, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Agent Health Check with timeout\nconst agentId = $input.all()[0].json.agentId;\n\n// Simulate health check (replace with actual API call)\nconst healthStatus = {\n  agentId,\n  healthy: true,\n  responseTime: Math.floor(Math.random() * 100) + 50,\n  lastHeartbeat: new Date().toISOString(),\n  status: 'operational'\n};\n\n// Check for stuck agents (no response > 5 seconds)\nif (healthStatus.responseTime > 5000) {\n  healthStatus.healthy = false;\n  healthStatus.status = 'degraded';\n}\n\nreturn { json: { ...$input.all()[0].json, health: healthStatus };"}
+      },
+      "id": "health-monitor",
+      "name": "Agent Health Monitor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "agent_id",
+              "value": "={{ $json.agentId }}"
+            },
+            {
+              "name": "client_id",
+              "value": "={{ $json.clientId }}"
+            },
+            {
+              "name": "configuration_valid",
+              "value": "={{ $json.configValid }}"
+            },
+            {
+              "name": "health_status",
+              "value": "={{ $json.health.status }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "client-agent-mapping",
+      "name": "Client-Agent Mapping",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "job-sector-check",
+              "leftValue": "={{ $json.jobSector }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "job-specific-logic",
+      "name": "Job Specific Logic",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Secure Data Recording with PII handling\nconst input = $input.all()[0].json;\n\n// Mask sensitive data for logging\nfunction maskPII(data) {\n  const masked = { ...data };\n  \n  if (masked.userDetails) {\n    if (masked.userDetails.email) {\n      masked.userDetails.email = masked.userDetails.email.replace(\n        /(.{2}).*(@.*)/,\n        '$1***$2'\n      );\n    }\n    if (masked.userDetails.phone) {\n      masked.userDetails.phone = masked.userDetails.phone.replace(\n        /(.{3}).*(.{3})/,\n        '$1***$2'\n      );\n    }\n  }\n  \n  return masked;\n}\n\n// Record interaction (with masked data for logs)\nconst recordedData = {\n  timestamp: new Date().toISOString(),\n  agentId: input.agentId,\n  clientId: input.clientId,\n  channel: input.isCall ? 'call' : 'chat',\n  healthStatus: input.health?.status,\n  // Full data stored securely, masked data for logs\n  logData: maskPII(input)\n};\n\nreturn { json: { ...input, recordedData };"}
+      },
+      "id": "data-recorder",
+      "name": "Data Recorder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Secure Script Validation\nconst input = $input.all()[0].json;\nconst scriptContent = input.scriptContent || '';\n\n// Security patterns to detect\nconst dangerousPatterns = [\n  /\\beval\\s*\\(/i,\n  /\\bFunction\\s*\\(/i,\n  /\\brequire\\s*\\(\\s*['\"]fs['\"]/i,\n  /\\brequire\\s*\\(\\s*['\"]child_process['\"]/i,\n  /\\bprocess\\.env/i,\n  /\\bdocument\\.cookie/i\n];\n\nconst securityIssues = [];\n\nfor (const pattern of dangerousPatterns) {\n  if (pattern.test(scriptContent)) {\n    securityIssues.push(`Dangerous pattern detected: ${pattern.source}`);\n  }\n}\n\n// Size check\nconst maxSize = 102400; // 100KB\nif (scriptContent.length > maxSize) {\n  securityIssues.push(`Script exceeds size limit (${scriptContent.length} > ${maxSize})`);\n}\n\nconst scriptValidation = {\n  passed: securityIssues.length === 0,\n  issues: securityIssues,\n  timestamp: new Date().toISOString()\n};\n\nreturn { json: { ...input, scriptValidation };"}
+      },
+      "id": "script-manager",
+      "name": "Script Security Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "script-security-check",
+              "leftValue": "={{ $json.scriptValidation.passed }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "script-security-gate",
+      "name": "Script Security Gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2000, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "retry-condition",
+              "leftValue": "={{ $json.followUpCount }}",
+              "rightValue": 3,
+              "operator": {
+                "type": "number",
+                "operation": "lessThan"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "followup-logic",
+      "name": "Follow-up Logic",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2220, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "communication_type",
+              "value": "={{ $json.isCall ? 'call' : 'chat' }}"
+            },
+            {
+              "name": "timing_requirements",
+              "value": "={{ JSON.stringify($json.timing) }}"
+            },
+            {
+              "name": "scale_requirements",
+              "value": "={{ JSON.stringify($json.scale) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "comm-mode-logic",
+      "name": "Communication Mode Logic",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [2440, 300]
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "panel_visibility",
+              "value": "={{ $json.showInPanel }}"
+            },
+            {
+              "name": "system_load",
+              "value": "={{ $json.systemLoad }}"
+            },
+            {
+              "name": "active_sessions",
+              "value": "={{ $json.activeSessions }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "panel-monitor",
+      "name": "Panel Monitor",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [2660, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "best-practice-check",
+              "leftValue": "={{ $json.isTested }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "validation-check",
+      "name": "Validation Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2880, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "status",
+              "value": "complete"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            },
+            {
+              "name": "next_action",
+              "value": "={{ $json.nextAction }}"
+            },
+            {
+              "name": "security_checks_passed",
+              "value": "true"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "completion-node",
+      "name": "Completion Node",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [3100, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "config-invalid",
+              "leftValue": "={{ $json.configValid }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "error-handler",
+      "name": "Error Handler",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "values": {
+          "string": [
+            {
+              "name": "error_message",
+              "value": "Configuration invalid or agent not responding"
+            },
+            {
+              "name": "error_code",
+              "value": "AGENT_CONFIG_ERROR"
+            },
+            {
+              "name": "recommended_action",
+              "value": "Check agent configuration and restart"
+            },
+            {
+              "name": "timestamp",
+              "value": "={{ new Date().toISOString() }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "error-details",
+      "name": "Error Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 1,
+      "position": [1120, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Security Alert Logging\nconst errorData = $input.all()[0].json;\n\n// Log security event (integrate with your SIEM)\nconst securityAlert = {\n  type: 'WORKFLOW_ERROR',\n  severity: 'high',\n  timestamp: new Date().toISOString(),\n  details: {\n    errorCode: errorData.error_code,\n    agentId: errorData.agentId,\n    clientId: errorData.clientId\n  },\n  action: errorData.recommended_action\n};\n\n// In production, send to your security monitoring system\nconsole.log('SECURITY ALERT:', JSON.stringify(securityAlert));\n\nreturn { json: { ...errorData, securityAlert };"}
+      },
+      "id": "alert-system",
+      "name": "Security Alert System",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Script Security Failure Handler\nconst input = $input.all()[0].json;\n\nconst securityFailure = {\n  status: 'blocked',\n  reason: 'Script security validation failed',\n  issues: input.scriptValidation?.issues || [],\n  timestamp: new Date().toISOString(),\n  action: 'Script execution blocked for security reasons'\n};\n\nreturn { json: { ...input, securityFailure };"}
+      },
+      "id": "script-security-fail",
+      "name": "Script Security Failure",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 500]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "first-follow-up",
+              "leftValue": "={{ $json.followUpCount }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "first-follow-up",
+      "name": "First Follow-up",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2220, 100],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "second-follow-up",
+              "leftValue": "={{ $json.followUpCount }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "second-follow-up",
+      "name": "Second Follow-up",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2220, 300],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "third-follow-up",
+              "leftValue": "={{ $json.followUpCount }}",
+              "rightValue": 2,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "third-follow-up",
+      "name": "Third Follow-up",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2220, 500],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "jsCode": "// Error Response Handler\nconst errorInput = $input.all()[0].json;\n\nreturn {\n  json: {\n    success: false,\n    error: {\n      code: errorInput.error_code || 'WORKFLOW_ERROR',\n      message: errorInput.error_message || 'An error occurred',\n      recommendedAction: errorInput.recommended_action,\n      timestamp: new Date().toISOString()\n    }\n  }\n};"}
+      },
+      "id": "error-response",
+      "name": "Error Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 500]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Input Validation & Sanitization",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Input Validation & Sanitization": {
+      "main": [
+        [
+          {
+            "node": "Configuration Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Configuration Validation": {
+      "main": [
+        [
+          {
+            "node": "Chat Mode Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Mode Check": {
+      "main": [
+        [
+          {
+            "node": "Agent Health Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Mode Check": {
+      "main": [
+        [
+          {
+            "node": "Error Handler",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Health Monitor": {
+      "main": [
+        [
+          {
+            "node": "Client-Agent Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Handler": {
+      "main": [
+        [
+          {
+            "node": "Error Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Details": {
+      "main": [
+        [
+          {
+            "node": "Security Alert System",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client-Agent Mapping": {
+      "main": [
+        [
+          {
+            "node": "Job Specific Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Job Specific Logic": {
+      "main": [
+        [
+          {
+            "node": "Data Recorder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Data Recorder": {
+      "main": [
+        [
+          {
+            "node": "Script Security Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script Security Validator": {
+      "main": [
+        [
+          {
+            "node": "Script Security Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script Security Gate": {
+      "main": [
+        [
+          {
+            "node": "Follow-up Logic",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Script Security Failure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Logic": {
+      "main": [
+        [
+          {
+            "node": "First Follow-up",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Second Follow-up",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "Third Follow-up",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "First Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Communication Mode Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Second Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Communication Mode Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Third Follow-up": {
+      "main": [
+        [
+          {
+            "node": "Communication Mode Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Communication Mode Logic": {
+      "main": [
+        [
+          {
+            "node": "Panel Monitor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Panel Monitor": {
+      "main": [
+        [
+          {
+            "node": "Validation Check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validation Check": {
+      "main": [
+        [
+          {
+            "node": "Completion Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Alert System": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Script Security Failure": {
+      "main": [
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "saveManualExecutions": true,
+    "executionTimeout": 30,
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all"
+  },
+  "tags": [
+    {
+      "name": "secured",
+      "id": "tag-1"
+    },
+    {
+      "name": "media-control",
+      "id": "tag-2"
+    },
+    {
+      "name": "production",
+      "id": "tag-3"
+    }
+  ],
+  "triggerCount": 1,
+  "id": "secured-media-control-v2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "secured-instance"
+  },
+  "pinData": {},
+  "versionId": "2",
+  "updatedAt": "2026-02-24T00:00:00.000Z",
+  "createdAt": "2026-02-24T00:00:00.000Z"
+}

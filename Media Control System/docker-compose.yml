@@ -1,0 +1,63 @@
+# Docker Compose for Media Control Agent
+# For local development and testing
+
+version: '3.8'
+
+services:
+  # Main Application
+  app:
+    build:
+      context: .
+      target: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - JWT_SECRET=dev-secret-change-in-production
+      - LOG_LEVEL=debug
+    depends_on:
+      - redis
+
+  # Redis for caching and sessions
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  # PostgreSQL Database (optional - for future migration)
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=media_control
+      - POSTGRES_PASSWORD=dev_password_change_me
+      - POSTGRES_DB=media_control_agent
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # pgAdmin for database management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    ports:
+      - "5050:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@example.com
+      - PGADMIN_DEFAULT_PASSWORD=admin_password_change_me
+    depends_on:
+      - postgres
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  default:
+    name: media-control-network
